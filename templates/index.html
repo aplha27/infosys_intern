@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Screening</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .container { max-width: 600px; margin-top: 50px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="text-center">📄 Resume Screener</h2>
+        
+        <form id="screeningForm">
+            <div class="mb-3">
+                <label class="form-label">Upload Resume (TXT/XLSX) or Enter Manually</label>
+                <input type="file" class="form-control" id="resumeFile">
+            </div>
+            <div class="mb-3">
+                <textarea class="form-control" id="resumeText" rows="5" placeholder="Or paste your resume here..."></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Job Description</label>
+                <textarea class="form-control" id="jobDescription" rows="3" placeholder="Enter job description"></textarea>
+            </div>
+            <button type="button" class="btn btn-primary w-100" onclick="screenResume()">🔍 Screen Resume</button>
+        </form>
+
+        <div id="loading" class="mt-3 text-center hidden">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Processing...</span>
+            </div>
+        </div>
+
+        <div id="result" class="mt-4 hidden">
+            <h4>Screening Result</h4>
+            <p id="screeningMessage"></p>
+            <a id="interviewLink" class="btn btn-success hidden" href="/interview">Proceed to Interview</a>
+        </div>
+    </div>
+
+    <script>
+        function screenResume() {
+            let fileInput = document.getElementById('resumeFile').files[0];
+            let resumeText = document.getElementById('resumeText').value.trim();
+            let jobDescription = document.getElementById('jobDescription').value.trim();
+            let formData = new FormData();
+
+            if (fileInput) {
+                formData.append('resume_file', fileInput);
+            } else if (resumeText) {
+                formData.append('resume_text', resumeText);
+            } else {
+                alert("Please upload a resume file or enter resume text.");
+                return;
+            }
+
+            if (!jobDescription) {
+                alert("Please enter a job description.");
+                return;
+            }
+
+            formData.append('job_description', jobDescription);
+
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('result').classList.add('hidden');
+
+            fetch('/screen', { method: 'POST', body: formData })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('loading').classList.add('hidden');
+                    document.getElementById('result').classList.remove('hidden');
+                    document.getElementById('screeningMessage').innerText = `Match Category: ${data.match_category}, Score: ${data.similarity_score}%`;
+                    
+                    if (data.qualified) {
+                        document.getElementById('interviewLink').classList.remove('hidden');
+                    }
+                })
+                .catch(error => console.error("Error:", error));
+        }
+    </script>
+</body>
+</html>
+
+
+

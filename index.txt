@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Screening</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .container {
+            max-width: 800px;
+            margin-top: 2rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .result-box {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .score-box {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        .score-item {
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #e9ecef;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Resume Screening</h1>
+        
+        <div class="alert alert-info mb-4" role="alert">
+            Please submit your resume and the job description for screening.
+        </div>
+
+        <form id="screeningForm" class="mb-4">
+            <div class="form-group">
+                <label for="resumeFile">Upload Resume (txt or xlsx)</label>
+                <input type="file" class="form-control" id="resumeFile" name="resume_file" accept=".txt,.xlsx">
+            </div>
+            
+            <div class="form-group">
+                <label for="resumeText">Or Paste Resume Text</label>
+                <textarea class="form-control" id="resumeText" name="resume_text" rows="5"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="jobDescription">Job Description</label>
+                <textarea class="form-control" id="jobDescription" name="job_description" rows="5" required></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+
+        <div id="result" class="result-box">
+            <h3>Screening Results</h3>
+            <div class="score-box">
+                <div class="score-item">
+                    <h5>Similarity Score</h5>
+                    <p id="similarityScore">-</p>
+                </div>
+                <div class="score-item">
+                    <h5>Match Category</h5>
+                    <p id="matchCategory">-</p>
+                </div>
+            </div>
+            <div id="message" class="mt-3"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('screeningForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const resumeFile = document.getElementById('resumeFile').files[0];
+            const resumeText = document.getElementById('resumeText').value;
+            const jobDescription = document.getElementById('jobDescription').value;
+
+            if (resumeFile) {
+                formData.append('resume_file', resumeFile);
+            } else if (resumeText) {
+                formData.append('resume_text', resumeText);
+            }
+            formData.append('job_description', jobDescription);
+
+            try {
+                const response = await fetch('/screen', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                console.log('Screen result:', result);
+
+                // Show results
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('similarityScore').textContent = `${result.similarity_score}%`;
+                document.getElementById('matchCategory').textContent = result.match_category;
+                
+                if (result.error) {
+                    document.getElementById('message').className = 'alert alert-danger';
+                    document.getElementById('message').textContent = result.error;
+                } else if (result.qualified) {
+                    document.getElementById('message').className = 'alert alert-success';
+                    document.getElementById('message').textContent = 'Qualification successful! Redirecting to interview...';
+                    setTimeout(() => {
+                        window.location.href = '/interview';
+                    }, 1500);
+                } else {
+                    document.getElementById('message').className = 'alert alert-warning';
+                    document.getElementById('message').textContent = result.message;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('message').className = 'alert alert-danger';
+                document.getElementById('message').textContent = 'An error occurred while processing your request.';
+            }
+        });
+    </script>
+</body>
+</html> 

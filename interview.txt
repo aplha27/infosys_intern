@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .interview-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+        .question-box {
+            background-color: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        .answer-box {
+            min-height: 100px;
+            margin-bottom: 2rem;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-active {
+            background-color: #28a745;
+            animation: pulse 2s infinite;
+        }
+        .status-inactive {
+            background-color: #dc3545;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        #recordingStatus {
+            display: none;
+            color: #dc3545;
+            margin-top: 1rem;
+        }
+        .interview-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="interview-status">
+        Question <span id="questionNumber">0</span> of 5
+    </div>
+
+    <div class="container interview-container">
+        <h1 class="text-center mb-4">AI Interview Session</h1>
+        
+        <div class="alert alert-info" role="alert">
+            <i class="fas fa-info-circle"></i> 
+            Please speak clearly into your microphone when answering questions.
+        </div>
+
+        <div class="card question-box">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    Current Question
+                </h5>
+                <p class="card-text" id="currentQuestion">Click "Start Interview" to begin</p>
+            </div>
+        </div>
+
+        <div class="answer-box">
+            <h5>Your Answer</h5>
+            <div class="border rounded p-3" id="transcribedAnswer">
+                Your answer will appear here after speaking...
+            </div>
+            <div id="recordingStatus">Recording your answer...</div>
+        </div>
+
+        <div class="text-center">
+            <button class="btn btn-primary me-2" id="startBtn">Start Interview</button>
+            <button class="btn btn-secondary" id="nextBtn" disabled>Next Question</button>
+        </div>
+
+        <div class="mt-4">
+            <h5>Interview Progress</h5>
+            <div class="progress">
+                <div class="progress-bar" role="progressbar" style="width: 0%" id="progressBar"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const startBtn = document.getElementById('startBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const currentQuestion = document.getElementById('currentQuestion');
+        const transcribedAnswer = document.getElementById('transcribedAnswer');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const progressBar = document.getElementById('progressBar');
+        const recordingStatus = document.getElementById('recordingStatus');
+        const questionNumber = document.getElementById('questionNumber');
+
+        let interviewStarted = false;
+        let currentQuestionIndex = 0;
+
+        startBtn.addEventListener('click', async () => {
+            try {
+                startBtn.disabled = true;
+                statusIndicator.className = 'status-indicator status-active';
+                
+                const response = await fetch('/start_interview', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                currentQuestion.textContent = data.question;
+                nextBtn.disabled = false;
+                interviewStarted = true;
+                currentQuestionIndex = 1;
+                questionNumber.textContent = currentQuestionIndex;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                currentQuestion.textContent = 'Error starting interview. Please refresh and try again.';
+                startBtn.disabled = false;
+                statusIndicator.className = 'status-indicator status-inactive';
+            }
+        });
+
+        nextBtn.addEventListener('click', async () => {
+            try {
+                nextBtn.disabled = true;
+                recordingStatus.style.display = 'block';
+                transcribedAnswer.textContent = 'Recording your answer...';
+                
+                const response = await fetch('/next_question', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                recordingStatus.style.display = 'none';
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                if (data.complete) {
+                    // Interview is complete
+                    currentQuestion.textContent = data.message;
+                    transcribedAnswer.textContent = 'Interview completed!';
+                    nextBtn.disabled = true;
+                    statusIndicator.className = 'status-indicator status-inactive';
+                    progressBar.style.width = '100%';
+                    questionNumber.textContent = '5';
+                } else {
+                    // Show next question
+                    currentQuestion.textContent = data.question;
+                    transcribedAnswer.textContent = data.last_answer;
+                    nextBtn.disabled = false;
+                    progressBar.style.width = `${data.progress}%`;
+                    currentQuestionIndex++;
+                    questionNumber.textContent = currentQuestionIndex;
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                recordingStatus.style.display = 'none';
+                transcribedAnswer.textContent = 'Error processing answer. Please try again.';
+                nextBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html> 

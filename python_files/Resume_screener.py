@@ -67,3 +67,35 @@ if 'Job Description' in combined_df.columns and 'Resume' in combined_df.columns:
     print(combined_df.groupby('decision')['resume_job_similarity'].mean())
 else:
     print("Error: Required columns 'job_description' or 'resume' are missing from the DataFrame.")
+
+def screen_resume(job_description, resume_text):
+    # Initialize the TF-IDF Vectorizer
+    vectorizer = TfidfVectorizer()
+    
+    # Create a small dataframe with the input
+    data = pd.DataFrame({
+        'Job Description': [job_description],
+        'Resume': [resume_text]
+    })
+    
+    # Fit and transform the job descriptions and resumes
+    tfidf_job_desc = vectorizer.fit_transform(data['Job Description'])
+    tfidf_resumes = vectorizer.transform(data['Resume'])
+    
+    # Calculate the cosine similarity
+    similarity_score = cosine_similarity(tfidf_resumes, tfidf_job_desc)[0][0]
+    
+    # Get match category
+    match_category = get_match_category(similarity_score)
+    
+    return {
+        'similarity_score': round(similarity_score * 100, 2),
+        'match_category': match_category
+    }
+
+def get_match_category(similarity_score):
+    if similarity_score >= 0.8: return 'Excellent Match'
+    elif similarity_score >= 0.6: return 'Strong Match'
+    elif similarity_score >= 0.4: return 'Moderate Match'
+    elif similarity_score >= 0.2: return 'Weak Match'
+    else: return 'Poor Match'
