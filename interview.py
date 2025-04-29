@@ -15,7 +15,7 @@ from email.mime.multipart import MIMEMultipart
 # ============================
 # 1. Set API Key and Initialize Client
 # ============================
-os.environ["TOGETHER_API_KEY"] = "dfd4b5dc8c148f418ea5b2702bd8721a21ca6fabe3e8dc1c511fc7abae24c0a7"
+os.environ["TOGETHER_API_KEY"] = "56798c1b2f78b7d4b78aea84c6a3781a32c0a620620ba3115166de8f3a7e5037"
 client = Together()
 
 # ============================
@@ -36,10 +36,17 @@ qa_pairs = []
 # ============================
 # 4. Conduct AI Interview
 # ============================
-for i in range(1):
+for i in range(10):
     prompt = f"Based on the following job description and resume, generate a relevant interview question (generate only question without any description of question):\n\nJob Description: {job_description}\n\nResume: {resume}\n\nPrevious Q&A: {qa_pairs}\n\nNext Interview Question:"
-    response = client.chat.completions.create(model="meta-llama/Llama-Vision-Free", messages=[{"role": "user", "content": prompt}])
-    question = response.choices[0].message.content.strip()
+    try:
+        response = client.chat.completions.create(model="meta-llama/Llama-Vision-Free", messages=[{"role": "user", "content": prompt}])
+        question = response.choices[0].message.content.strip()
+    except Exception as e:
+        error_message = str(e)
+        if "credit_limit" in error_message or "402" in error_message:
+            question = "Error: Credit limit exceeded. Please upgrade your plan or add credit."
+        else:
+            raise
     
     print(f"AI: {question}")
     engine.say(question)
